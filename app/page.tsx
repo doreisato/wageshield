@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 
+type CalcResult = {
+  totalOwed: string;
+  received: string;
+  shortage: string;
+  isShort: boolean;
+  totalHours: number;
+  paidHours: string;
+  unpaidHours: string;
+};
+
 export default function Home() {
   const [formData, setFormData] = useState({
     hourlyRate: "",
     hoursWorked: "",
     payReceived: "",
   });
-  const [result, setResult] = useState<{
-    totalOwed: string;
-    received: string;
-    shortage: string;
-    missingHours: string;
-    isShort: boolean;
-    totalHours: number;
-    paidHours: string;
-    unpaidHours: string;
-  } | null>(null);
+  const [result, setResult] = useState<CalcResult | null>(null);
 
   const calculate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,14 +26,9 @@ export default function Home() {
     const hours = parseFloat(formData.hoursWorked) || 0;
     const received = parseFloat(formData.payReceived) || 0;
 
-    let totalOwed = 0;
-    if (hours > 40) {
-      const regPay = 40 * rate;
-      const otPay = (hours - 40) * (rate * 1.5);
-      totalOwed = regPay + otPay;
-    } else {
-      totalOwed = hours * rate;
-    }
+    const regularHours = Math.min(hours, 40);
+    const overtimeHours = Math.max(hours - 40, 0);
+    const totalOwed = regularHours * rate + overtimeHours * (rate * 1.5);
 
     const shortage = totalOwed - received;
     const isShort = shortage > 0.01;
@@ -43,7 +39,6 @@ export default function Home() {
       totalOwed: totalOwed.toFixed(2),
       received: received.toFixed(2),
       shortage: isShort ? shortage.toFixed(2) : "0.00",
-      missingHours: unpaidHours,
       isShort,
       totalHours: hours,
       paidHours,
@@ -52,182 +47,153 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col">
-      <div className="flex-1 max-w-[640px] mx-auto px-5 py-16 w-full">
-        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">
-          WageShield
-        </p>
-        <h1 className="text-4xl font-semibold leading-tight mb-3">
-          Get the money your boss owes you.
-        </h1>
-        <p className="text-neutral-400 text-lg mb-10 leading-relaxed">
-          Find out in seconds if your paycheck is missing money you earned.
-        </p>
-
-        <form onSubmit={calculate} className="space-y-6" noValidate>
-          <div>
-            <label
-              htmlFor="hourlyRate"
-              className="block text-sm text-neutral-300 mb-2"
-            >
-              How much do you make an hour?
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600">
-                $
-              </span>
-              <input
-                id="hourlyRate"
-                type="number"
-                step="0.01"
-                min="0"
-                inputMode="decimal"
-                required
-                autoFocus
-                className="w-full h-12 pl-7 pr-3 rounded-md bg-black border border-neutral-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-white"
-                value={formData.hourlyRate}
-                onChange={(e) =>
-                  setFormData({ ...formData, hourlyRate: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="hoursWorked"
-              className="block text-sm text-neutral-300 mb-2"
-            >
-              How many hours did you work?
-            </label>
-            <input
-              id="hoursWorked"
-              type="number"
-              step="0.5"
-              min="0"
-              inputMode="decimal"
-              required
-              className="w-full h-12 px-3 rounded-md bg-black border border-neutral-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-white"
-              value={formData.hoursWorked}
-              onChange={(e) =>
-                setFormData({ ...formData, hoursWorked: e.target.value })
-              }
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="payReceived"
-              className="block text-sm text-neutral-300 mb-2"
-            >
-              How much was your paycheck before taxes?
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600">
-                $
-              </span>
-              <input
-                id="payReceived"
-                type="number"
-                step="0.01"
-                min="0"
-                inputMode="decimal"
-                required
-                className="w-full h-12 pl-7 pr-3 rounded-md bg-black border border-neutral-700 text-white text-base focus:outline-none focus:ring-2 focus:ring-white"
-                value={formData.payReceived}
-                onChange={(e) =>
-                  setFormData({ ...formData, payReceived: e.target.value })
-                }
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full h-12 bg-white text-black font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-white"
-          >
-            Check my paycheck
-          </button>
-
-          <p className="text-xs text-[#888888] leading-relaxed">
-            This tool is a guide, not legal advice. We are not lawyers. Your
-            actual missing pay might change slightly based on local taxes and
-            state laws.
+    <main className="min-h-screen bg-black text-white">
+      <div className="mx-auto max-w-5xl px-5 py-12 md:py-16">
+        <div className="mb-8 md:mb-12">
+          <p className="text-xs tracking-[0.24em] uppercase text-neutral-500 mb-3">WageShield</p>
+          <h1 className="text-4xl md:text-6xl font-semibold leading-tight tracking-tight mb-4">
+            Get the money your boss owes you.
+          </h1>
+          <p className="text-neutral-400 text-base md:text-lg max-w-2xl">
+            Instant wage check for hourly workers. Enter your hours and paycheck, and we calculate whether you were underpaid.
           </p>
-        </form>
+        </div>
 
-        {result && (
-          <section className="mt-10 border border-neutral-800 rounded-md p-6">
-            {result.isShort ? (
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
+          <section className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5 md:p-6">
+            <form onSubmit={calculate} className="space-y-5" noValidate>
+              <Field
+                id="hourlyRate"
+                label="Hourly wage"
+                value={formData.hourlyRate}
+                onChange={(v) => setFormData({ ...formData, hourlyRate: v })}
+                prefix="$"
+              />
+
+              <Field
+                id="hoursWorked"
+                label="Hours worked this pay period"
+                value={formData.hoursWorked}
+                onChange={(v) => setFormData({ ...formData, hoursWorked: v })}
+              />
+
+              <Field
+                id="payReceived"
+                label="Paycheck before taxes"
+                value={formData.payReceived}
+                onChange={(v) => setFormData({ ...formData, payReceived: v })}
+                prefix="$"
+              />
+
+              <button
+                type="submit"
+                className="w-full h-12 rounded-lg bg-white text-black text-sm font-semibold hover:bg-neutral-200 transition-colors"
+              >
+                Check my paycheck
+              </button>
+
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                WageShield is educational and not legal advice. Final amounts can vary by state law, contract terms, and payroll deductions.
+              </p>
+            </form>
+          </section>
+
+          <section className="rounded-2xl border border-neutral-800 bg-neutral-950/70 p-5 md:p-6 min-h-[320px]">
+            {!result ? (
+              <div className="h-full flex flex-col justify-center">
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">Result</p>
+                <h2 className="text-2xl font-semibold mb-3">No calculation yet.</h2>
+                <p className="text-neutral-400">
+                  Fill the form and tap <span className="text-white">Check my paycheck</span> to see your estimated shortage and next steps.
+                </p>
+              </div>
+            ) : result.isShort ? (
               <>
-                <p className="text-xs tracking-[0.16em] uppercase text-neutral-500 mb-2">
-                  Result
-                </p>
-                <h2 className="text-2xl font-semibold mb-4">
-                  You are owed ${result.shortage}.
-                </h2>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-6">
-                  You worked {result.totalHours} hours, but you were only paid
-                  for {result.paidHours} hours. That means you worked{" "}
-                  {result.unpaidHours} hours for free.
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-amber-400 mb-3">Potential Wage Theft</p>
+                <h2 className="text-3xl font-semibold mb-5">You may be owed ${result.shortage}</h2>
 
                 <div className="space-y-3 text-sm mb-6">
-                  <div className="flex justify-between border-b border-neutral-800 pb-2">
-                    <span className="text-neutral-500">Total Owed (inc. OT)</span>
-                    <span>${result.totalOwed}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-neutral-800 pb-2">
-                    <span className="text-neutral-500">Amount Received</span>
-                    <span>${result.received}</span>
-                  </div>
-                  <div className="flex justify-between pt-1">
-                    <span className="text-neutral-500">Shortage</span>
-                    <span className="font-semibold">${result.shortage}</span>
-                  </div>
+                  <Row label="Total owed (incl. overtime)" value={`$${result.totalOwed}`} />
+                  <Row label="Amount received" value={`$${result.received}`} />
+                  <Row label="Estimated shortage" value={`$${result.shortage}`} strong />
+                  <Row label="Estimated unpaid hours" value={`${result.unpaidHours}h`} />
                 </div>
 
                 <div className="border-t border-neutral-800 pt-5">
-                  <p className="text-xs tracking-[0.16em] uppercase text-neutral-500 mb-3">
-                    Next Steps
-                  </p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">Suggested next steps</p>
                   <ol className="list-decimal pl-5 text-sm text-neutral-300 space-y-2">
-                    <li>Write down your hours in a notebook every single day.</li>
-                    <li>Keep photos or copies of all your pay stubs.</li>
-                    <li>
-                      Call your state labor board to report the stolen pay.
-                    </li>
+                    <li>Keep a daily log of start/end times and breaks.</li>
+                    <li>Save all pay stubs and screenshots.</li>
+                    <li>Contact your state labor board to file a wage claim.</li>
                   </ol>
                 </div>
               </>
             ) : (
               <>
-                <p className="text-xs tracking-[0.16em] uppercase text-neutral-500 mb-2">
-                  Result
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-400 mb-3">Looks Okay</p>
+                <h2 className="text-3xl font-semibold mb-3">Paycheck looks accurate.</h2>
+                <p className="text-neutral-400 mb-6">
+                  Based on your inputs, your gross pay (${result.received}) meets or exceeds estimated owed pay (${result.totalOwed}).
                 </p>
-                <h2 className="text-2xl font-semibold mb-2">
-                  Paycheck looks accurate.
-                </h2>
-                <p className="text-neutral-400 text-sm leading-relaxed">
-                  Based on what you entered, your gross pay of ${result.received}{" "}
-                  matches or exceeds the ${result.totalOwed} owed for{" "}
-                  {result.totalHours} hours of work.
-                </p>
+                <div className="space-y-3 text-sm">
+                  <Row label="Hours worked" value={`${result.totalHours}h`} />
+                  <Row label="Amount received" value={`$${result.received}`} />
+                  <Row label="Estimated owed" value={`$${result.totalOwed}`} />
+                </div>
               </>
             )}
           </section>
-        )}
-      </div>
+        </div>
 
-      <footer className="border-t border-neutral-900 py-6 text-center text-xs text-neutral-600">
-        Built by{" "}
-        <a
-          href="https://infinite-machines-production.up.railway.app"
-          className="text-neutral-500 hover:text-white"
-        >
-          Infinite Machines
-        </a>
-      </footer>
+        <footer className="mt-10 pt-6 border-t border-neutral-900 text-xs text-neutral-600 text-center">
+          Built by <a href="https://infinite-machines-production.up.railway.app" className="text-neutral-400 hover:text-white">Infinite Machines</a>
+        </footer>
+      </div>
     </main>
+  );
+}
+
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  prefix,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  prefix?: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm text-neutral-300 mb-2">
+        {label}
+      </label>
+      <div className="relative">
+        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">{prefix}</span>}
+        <input
+          id={id}
+          type="number"
+          step="0.01"
+          min="0"
+          inputMode="decimal"
+          required
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`w-full h-12 rounded-lg border border-neutral-700 bg-black text-white text-base focus:outline-none focus:ring-2 focus:ring-neutral-400 ${prefix ? "pl-7 pr-3" : "px-3"}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+      <span className="text-neutral-500">{label}</span>
+      <span className={strong ? "font-semibold text-white" : "text-neutral-200"}>{value}</span>
+    </div>
   );
 }
